@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VidSummary - YouTube Video Summarizer</title>
+  <style>
+    /* Basic reset */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background-color: #f4f4f9; color: #333; }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #1a73e8;
+      color: white;
+      padding: 1rem 2rem;
+    }
+    header .logo { font-size: 1.5rem; font-weight: bold; }
+    header .nav input {
+      padding: 0.5rem; width: 300px; border-radius: 4px; border: none; margin-right: 0.5rem;
+    }
+    header .nav button {
+      padding: 0.5rem 1rem; background-color: #ffca28; border: none; border-radius: 4px;
+      cursor: pointer; font-weight: bold;
+    }
+    header .nav button:hover { background-color: #ffc107; }
+
+    main { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+    .video-preview {
+      background-color: white; padding: 1rem; border-radius: 8px; margin-bottom: 2rem;
+      display: none;
+    }
+    .summary-section {
+      background-color: white; padding: 1rem; border-radius: 8px;
+    }
+    .summary-section textarea {
+      width: 100%; height: 200px; padding: 1rem; border-radius: 4px; border: 1px solid #ccc;
+      resize: none; margin-bottom: 1rem;
+    }
+    .summary-section .buttons { display: flex; gap: 1rem; }
+    .summary-section button {
+      padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;
+      background-color: #1a73e8; color: white; font-weight: bold;
+    }
+    .summary-section button:hover { background-color: #1669c1; }
+
+    footer { text-align: center; margin: 2rem 0; color: #555; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">VidSummary</div>
+    <div class="nav">
+      <input type="text" id="youtube-url" placeholder="Paste YouTube video link here...">
+      <button id="summarize-btn">Summarize</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="video-preview" id="video-preview"></section>
+
+    <section class="summary-section" id="summary-section">
+      <h2>Summary</h2>
+      <textarea id="summary-text" readonly placeholder="Your video summary will appear here..."></textarea>
+      <div class="buttons">
+        <button id="copy-btn">Copy</button>
+        <button id="download-btn">Download</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>&copy; 2026 VidSummary. All rights reserved.</footer>
+
+  <script>
+    const summarizeBtn = document.getElementById("summarize-btn");
+    const youtubeUrlInput = document.getElementById("youtube-url");
+    const videoPreview = document.getElementById("video-preview");
+    const summaryText = document.getElementById("summary-text");
+    const copyBtn = document.getElementById("copy-btn");
+    const downloadBtn = document.getElementById("download-btn");
+
+    // Simulated summary generator (replace with real API call)
+    function generateSummary(videoUrl) {
+      return `Summary for the video: ${videoUrl}\n\n- Key point 1\n- Key point 2\n- Key point 3`;
+    }
+
+    summarizeBtn.addEventListener("click", () => {
+      const url = youtubeUrlInput.value.trim();
+      if (!url) {
+        alert("Please enter a YouTube video URL!");
+        return;
+      }
+
+      // Show video preview (basic)
+      videoPreview.style.display = "block";
+      videoPreview.innerHTML = `
+        <p><strong>Video URL:</strong> <a href="${url}" target="_blank">${url}</a></p>
+      `;
+
+      // Generate summary
+      summaryText.value = "Generating summary...";
+      setTimeout(() => {
+        summaryText.value = generateSummary(url);
+      }, 1000);
+    });
+
+    // Copy summary
+    copyBtn.addEventListener("click", () => {
+      summaryText.select();
+      document.execCommand("copy");
+      alert("Summary copied to clipboard!");
+    });
+
+    // Download summary
+    downloadBtn.addEventListener("click", () => {
+      const blob = new Blob([summaryText.value], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "video-summary.txt";
+      link.click();
+    });
+  </script>
+</body>
+</html>
