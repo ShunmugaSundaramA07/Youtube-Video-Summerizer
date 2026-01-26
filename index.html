@@ -75,72 +75,122 @@
 
   <script>
   const summarizeBtn = document.getElementById("summarize-btn");
-  const youtubeUrlInput = document.getElementById("youtube-url");
-  const videoPreview = document.getElementById("video-preview");
-  const summaryText = document.getElementById("summary-text");
-  const copyBtn = document.getElementById("copy-btn");
-  const downloadBtn = document.getElementById("download-btn");
+const youtubeUrlInput = document.getElementById("youtube-url");
+const videoPreview = document.getElementById("video-preview");
+const summaryText = document.getElementById("summary-text");
+const copyBtn = document.getElementById("copy-btn");
+const downloadBtn = document.getElementById("download-btn");
 
-  // 🔴 CHANGE THIS → YOUR PRODUCTION WEBHOOK URL
-  const WEBHOOK_URL = "https://sundar02.app.n8n.cloud/webhook/youtube-summary";
+// 🔴 IMPORTANT: Use webhook-test for testing, then switch to webhook for production
+const WEBHOOK_URL = "https://sundar02.app.n8n.cloud/webhook-test/youtube-summary"; // Change to /webhook/ when workflow is activated
 
-  summarizeBtn.addEventListener("click", async () => {
-    const url = youtubeUrlInput.value.trim();
-    if (!url) {
-      alert("Please enter a YouTube video URL!");
-      return;
+summarizeBtn.addEventListener("click", async () => {
+  const url = youtubeUrlInput.value.trim();
+  
+  // Validate input
+  if (!url) {
+    alert("Please enter a YouTube video URL!");
+    return;
+  }
+
+  // Validate it's a YouTube URL
+  if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
+    alert("Please enter a valid YouTube URL!");
+    return;
+  }
+
+  // Show video preview
+  videoPreview.style.display = "block";
+  videoPreview.innerHTML = `
+    <p><strong>Video URL:</strong> 
+    <a href="${url}" target="_blank">${url}</a></p>
+  `;
+
+  // Show loading state
+  summaryText.value = "⏳ Generating summary... This may take 30-60 seconds.";
+  summarizeBtn.disabled = true;
+  summarizeBtn.textContent = "Processing...";
+
+  try {
+    const response = await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        youtubeUrl: url  // Sending as youtubeUrl (matches n8n code node)
+      })
+    });
+
+    // Check if request was successful
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Server error: ${response.status} - ${errorText}`);
     }
 
-    // Show video preview
-    videoPreview.style.display = "block";
-    videoPreview.innerHTML = `
-      <p><strong>Video URL:</strong> 
-      <a href="${url}" target="_blank">${url}</a></p>
-    `;
-
-    summaryText.value = "⏳ Generating summary...";
-
-    try {
-      const response = await fetch(WEBHOOK_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          youtubeUrl: url
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error("Webhook failed");
-      }
-
-      const data = await response.json();
-
-      // n8n last node must return { summary: "..." }
-      summaryText.value = data.summary || "No summary returned";
-
-    } catch (error) {
-      console.error(error);
-      summaryText.value = "❌ Error generating summary";
+    const data = await response.json();
+    console.log('Response from n8n:', data); // For debugging
+    
+    // Display the summary (handles multiple possible response formats)
+    if (data.summary) {
+      summaryText.value = data.summary;
+    } else if (data.formatted_summary) {
+      summaryText.value = data.formatted_summary;
+    } else if (data.message) {
+      summaryText.value = data.message;
+    } else {
+      summaryText.value = JSON.stringify(data, null, 2); // Show full response if structure is different
     }
-  });
+    
+  } catch (error) {
+    console.error('Error details:', error);
+    summaryText.value = `❌ Error generating summary:\n\n${error.message}\n\nPlease check:\n1. Is your n8n workflow activated?\n2. Is the webhook URL correct?\n3. Check browser console (F12) for details`;
+  } finally {
+    // Re-enable button
+    summarizeBtn.disabled = false;
+    summarizeBtn.textContent = "Summarize";
+  }
+});
 
-  // Copy summary
-  copyBtn.addEventListener("click", () => {
-    summaryText.select();
-    document.execCommand("copy");
-    alert("Summary copied to clipboard!");
-  });
+// Copy summary to clipboard
+copyBtn.addEventListener("click", () => {
+  if (!summaryText.value || summaryText.value.includes("⏳") || summaryText.value.includes("❌")) {
+    alert("Please generate a summary first!");
+    return;
+  }
+  
+  summaryText.select();
+  document.execCommand("copy");
+  
+  // Visual feedback
+  const originalText = copyBtn.textContent;
+  copyBtn.textContent = "✅ Copied!";
+  setTimeout(() => {
+    copyBtn.textContent = originalText;
+  }, 2000);
+});
 
-  // Download summary
-  downloadBtn.addEventListener("click", () => {
-    const blob = new Blob([summaryText.value], { type: "text/plain" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "video-summary.txt";
-    link.click();
-  });
+// Download summary as text file
+downloadBtn.addEventListener("click", () => {
+  if (!summaryText.value || summaryText.value.includes("⏳") || summaryText.value.includes("❌")) {
+    alert("Please generate a summary first!");
+    return;
+  }
+  
+  const blob = new Blob([summaryText.value], { type: "text/plain" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  
+  // Generate filename with timestamp
+  const timestamp = new Date().toISOString().slice(0, 10);
+  link.download = `youtube-summary-${timestamp}.txt`;
+  
+  link.click();
+  
+  // Cleanup
+  URL.revokeObjectURL(link.href);
+});
 </script>
 </body>
 </html>
+
