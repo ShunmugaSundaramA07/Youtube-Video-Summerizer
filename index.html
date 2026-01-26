@@ -74,53 +74,73 @@
   <footer>&copy; 2026 VidSummary. All rights reserved.</footer>
 
   <script>
-    const summarizeBtn = document.getElementById("summarize-btn");
-    const youtubeUrlInput = document.getElementById("youtube-url");
-    const videoPreview = document.getElementById("video-preview");
-    const summaryText = document.getElementById("summary-text");
-    const copyBtn = document.getElementById("copy-btn");
-    const downloadBtn = document.getElementById("download-btn");
+  const summarizeBtn = document.getElementById("summarize-btn");
+  const youtubeUrlInput = document.getElementById("youtube-url");
+  const videoPreview = document.getElementById("video-preview");
+  const summaryText = document.getElementById("summary-text");
+  const copyBtn = document.getElementById("copy-btn");
+  const downloadBtn = document.getElementById("download-btn");
 
-    // Simulated summary generator (replace with real API call)
-    function generateSummary(videoUrl) {
-      return `Summary for the video: ${videoUrl}\n\n- Key point 1\n- Key point 2\n- Key point 3`;
+  // 🔴 CHANGE THIS → YOUR PRODUCTION WEBHOOK URL
+  const WEBHOOK_URL = "https://sundar02.app.n8n.cloud/webhook/youtube-summary";
+
+  summarizeBtn.addEventListener("click", async () => {
+    const url = youtubeUrlInput.value.trim();
+    if (!url) {
+      alert("Please enter a YouTube video URL!");
+      return;
     }
 
-    summarizeBtn.addEventListener("click", () => {
-      const url = youtubeUrlInput.value.trim();
-      if (!url) {
-        alert("Please enter a YouTube video URL!");
-        return;
+    // Show video preview
+    videoPreview.style.display = "block";
+    videoPreview.innerHTML = `
+      <p><strong>Video URL:</strong> 
+      <a href="${url}" target="_blank">${url}</a></p>
+    `;
+
+    summaryText.value = "⏳ Generating summary...";
+
+    try {
+      const response = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          youtubeUrl: url
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Webhook failed");
       }
 
-      // Show video preview (basic)
-      videoPreview.style.display = "block";
-      videoPreview.innerHTML = `
-        <p><strong>Video URL:</strong> <a href="${url}" target="_blank">${url}</a></p>
-      `;
+      const data = await response.json();
 
-      // Generate summary
-      summaryText.value = "Generating summary...";
-      setTimeout(() => {
-        summaryText.value = generateSummary(url);
-      }, 1000);
-    });
+      // n8n last node must return { summary: "..." }
+      summaryText.value = data.summary || "No summary returned";
 
-    // Copy summary
-    copyBtn.addEventListener("click", () => {
-      summaryText.select();
-      document.execCommand("copy");
-      alert("Summary copied to clipboard!");
-    });
+    } catch (error) {
+      console.error(error);
+      summaryText.value = "❌ Error generating summary";
+    }
+  });
 
-    // Download summary
-    downloadBtn.addEventListener("click", () => {
-      const blob = new Blob([summaryText.value], { type: "text/plain" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "video-summary.txt";
-      link.click();
-    });
-  </script>
+  // Copy summary
+  copyBtn.addEventListener("click", () => {
+    summaryText.select();
+    document.execCommand("copy");
+    alert("Summary copied to clipboard!");
+  });
+
+  // Download summary
+  downloadBtn.addEventListener("click", () => {
+    const blob = new Blob([summaryText.value], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "video-summary.txt";
+    link.click();
+  });
+</script>
 </body>
 </html>
